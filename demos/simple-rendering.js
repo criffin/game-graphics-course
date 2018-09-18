@@ -1,3 +1,15 @@
+// *********************************************************************************************************************
+// **                                                                                                                 **
+// **                  This is an example of simplistic forward rendering technique using WebGL                       **
+// **                                                                                                                 **
+// *********************************************************************************************************************
+
+// Home task: change anything you like in this small demo, be creative and make it look cool ;)
+// * You can change 3D cube model with any other mesh using Blender WebGL export addon https://gist.github.com/mnstrspeed/c8a61e54fa99cc4ca1e1672e0739eb6e
+// * Change object and camera transformations inside draw() function
+// * Change colors using bgColor and fgColor variables
+// * Distort object shape inside vertexShader
+// * Distort object colors inside fragmentShader
 
 // ******************************************************
 // **                       Data                       **
@@ -134,6 +146,8 @@ let fragmentShader = `
 let vertexShader = `
     #version 300 es
     
+    uniform vec4 bgColor;
+    uniform vec4 fgColor;
     uniform mat4 modelViewMatrix;
     uniform mat4 modelViewProjectionMatrix;
     
@@ -145,8 +159,8 @@ let vertexShader = `
     void main()
     {
         gl_Position = modelViewProjectionMatrix * vec4(position, 1.0);
-        vec3 norm = (modelViewMatrix * vec4(normal, 0.0)).xyz;
-        color = mix(vec4(1.0, 0.2, 0.3, 1.0) * 0.8, vec4(1.0, 0.9, 0.5, 1.0), norm.z) + pow(norm.z, 10.0);
+        vec3 viewNormal = (modelViewMatrix * vec4(normal, 0.0)).xyz;
+        color = mix(bgColor * 0.8, fgColor, viewNormal.z) + pow(viewNormal.z, 10.0);
     }
 `;
 
@@ -155,8 +169,12 @@ let vertexShader = `
 // **             Application processing               **
 // ******************************************************
 
-app.clearColor(1.0, 0.2, 0.3, 1.0)
-// .depthTest();
+let bgColor = vec4.fromValues(1.0, 0.2, 0.3, 1.0);
+let fgColor = vec4.fromValues(1.0, 0.9, 0.5, 1.0);
+
+
+app.clearColor(bgColor[0], bgColor[1], bgColor[2], bgColor[3])
+    // .depthTest();
     .cullBackfaces();
 
 let program = app.createProgram(vertexShader.trim(), fragmentShader.trim());
@@ -175,7 +193,10 @@ let modelViewProjectionMatrix = mat4.create();
 let rotateXMatrix = mat4.create();
 let rotateYMatrix = mat4.create();
 
-let drawCall = app.createDrawCall(program, vertexArray);
+let drawCall = app.createDrawCall(program, vertexArray, PicoGL.TRIANGLES)
+    .uniform("bgColor", bgColor)
+    .uniform("fgColor", fgColor);
+
 let startTime = new Date().getTime() / 1000;
 
 
@@ -184,7 +205,7 @@ function draw() {
     let time = new Date().getTime() / 1000 - startTime;
 
     mat4.perspective(projMatrix, Math.PI / 4, app.width / app.height, 0.1, 100.0);
-    mat4.lookAt(viewMatrix, vec3.fromValues(3, 2, 2), vec3.fromValues(0, 0, 0), vec3.fromValues(0, 1, 0));
+    mat4.lookAt(viewMatrix, vec3.fromValues(3, 0, 2), vec3.fromValues(0, 0, 0), vec3.fromValues(0, 1, 0));
     mat4.multiply(viewProjMatrix, projMatrix, viewMatrix);
 
     mat4.fromXRotation(rotateXMatrix, time * 0.1136);
